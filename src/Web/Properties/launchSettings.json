@@ -1,0 +1,43 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:5729",
+      "sslPort": 44394
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "BraintreePublicKey": "g7fh2kjhgdhc4m56",
+        "BraintreeEnvironment": "sandbox",
+        "BraintreeMerchantId": "3nz8bs3v8rrtns62",
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "BraintreePrivateKey": "79570b11c7017834b63c3b3e2815d6d7"
+      }
+    },
+    "Web": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "launchBrowser": true,
+      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "environmentVariables": {
+        "ASPNETCORE_URLS": "https://+:443;http://+:80",
+        "ASPNETCORE_HTTPS_PORT": "44395"
+      },
+      "httpPort": 10000,
+      "useSSL": true,
+      "sslPort": 44395
+    }
+  }
+}
