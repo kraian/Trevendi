@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Web.Database;
 using Web.Models;
 
@@ -21,9 +17,9 @@ namespace Web.Controllers
         public ActionResult<string> GeneratePaykey([FromBody] PaymentRequest request)
         {
             string payKey = Utils.Utils.GenerateRandomId(10);
-            var payment = new GenericPayment
+            var paymentDetails = new GenericPayment
             {
-                Total = request.total,
+                Amount = request.total,
                 InvoiceNo = request.invoiceno,
                 Currency = request.currency,
                 PayKey = payKey,
@@ -31,15 +27,9 @@ namespace Web.Controllers
                 Hashkey = request.hashkey
             };
 
-            _db.SaveDetails(payKey, payment);
+            _db.SaveDetails(payKey, paymentDetails);
 
             return payKey;
-        }
-
-        [HttpGet]
-        public ActionResult Pay(string paykey)
-        {
-            return null;
         }
     }
 }

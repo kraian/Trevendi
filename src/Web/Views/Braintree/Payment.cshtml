@@ -1,0 +1,76 @@
+﻿@model PaymentViewModel
+
+@{
+    ViewData["Title"] = "Payment";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h5>Invoice payment: @Model.InvoiceNo</h5>
+
+<input type="hidden" asp-for="ClientToken" />
+<input type="hidden" asp-for="PayKey" />
+<input id="PaymentMethodNonce" name="PaymentMethodNonce" type="hidden" />
+
+<div class="row">
+    <div class="col">
+        <span class="input-label">Amount: @Model.Amount</span>&nbsp;&euro;
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div id="bt-dropin"></div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <button id="Pay" class="button" type="button">Pay</button>
+    </div>
+</div>
+
+@section Scripts  {
+    <script src="https://js.braintreegateway.com/web/dropin/1.18.0/js/dropin.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            var clientToken = $('#ClientToken').val();
+            braintree.dropin.create({
+                authorization: clientToken,
+                container: '#bt-dropin',
+                paypal: {
+                    flow: 'vault'
+                }
+            }, function (createErr, instance) {
+                instance.requestPaymentMethod(function (err, payload) {
+                    if (err) {
+                        console.log('Error', err);
+                        return;
+                    }
+                });
+            });
+
+            $('#Pay').click(function (event) {
+                event.preventDefault();
+
+                $('#PaymentMethodNonce').val('fake-valid-nonce');
+
+                var data = {
+                    payKey: $('#PayKey').val(),
+                    paymentMethodNonce: $('#PaymentMethodNonce').val()
+                };
+
+                $.ajax({
+                    url: '/braintree/payment',
+                    method: 'POST',
+                    data: JSON.stringify(data),
+                    contentType: 'application/json'
+                }).done(function (transactionId) {
+                    alert('Payment was successfull! You transaction id is: ' + transactionId);
+                }).fail(function (result) {
+                    alert('Something went wrong! Check the console for more details.');
+                    console.log(result);
+                });
+            });
+        });
+    </script>
+}
+

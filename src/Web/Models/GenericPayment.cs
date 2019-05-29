@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 
 namespace Web.Models
 {
@@ -10,16 +9,13 @@ namespace Web.Models
         public string MarketplaceUrl { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public List<Payee> PayeeInfos { get; set; }
-
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string InvoiceNo { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string PayKey { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public string Total { get; set; }
+        public decimal Amount { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string Currency { get; set; }

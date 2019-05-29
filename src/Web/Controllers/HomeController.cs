@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Web.Braintree;
 using Web.Models;
 
 namespace Web.Controllers
@@ -14,6 +9,12 @@ namespace Web.Controllers
         public IActionResult Index()
         {
             return View();
+        }
+
+        public IActionResult Checkout()
+        {
+            string redirectUrl = Url.Action("Payment", "Braintree", null, "https");
+            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=K6GuIgidmF");
         }
 
         public IActionResult Privacy()
