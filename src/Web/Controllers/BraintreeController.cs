@@ -1,5 +1,7 @@
 ﻿using Braintree;
 using Microsoft.AspNetCore.Mvc;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Web.Braintree;
 using Web.Database;
 using Web.Models;
@@ -40,7 +42,7 @@ namespace Web.Controllers
         }
 
         [HttpPost]
-        public ActionResult<string> Payment([FromBody] CreatePaymentViewModel model)
+        public async Task<ActionResult<string>> Payment([FromBody] CreatePaymentViewModel model)
         {
             GenericPayment paymentDetails = _db.GetDetails(model.PayKey);
             if (paymentDetails == null)
@@ -62,9 +64,26 @@ namespace Web.Controllers
             Result<Transaction> result = gateway.Transaction.Sale(request);
             if (result.IsSuccess())
             {
-                // post to https://eventbooking.sandbox.arcadier.io/user/checkout/transaction-status
-                // redirect to https://eventbooking.sandbox.arcadier.io/user/checkout/current-status?invoiceNo={invoiceNo}
-                return Ok(result.Target.Id);
+                using (var httpClient = new HttpClient())
+                {
+                    string url = "https://eventbooking.sandbox.arcadier.io/user/checkout/transaction-status";
+                    HttpResponseMessage response = await httpClient.PostAsJsonAsync(url, new
+                    {
+                        invoiceno = paymentDetails.InvoiceNo,
+                        hashkey = paymentDetails.Hashkey,
+                        gateway = paymentDetails.Gateway,
+                        paykey = paymentDetails.PayKey,
+                        status = "success"
+                    });
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return Redirect($"https://eventbooking.sandbox.arcadier.io/user/checkout/current-status?invoiceNo={paymentDetails.InvoiceNo}");
+                        //return Ok(result.Target.Id);
+                    }
+
+                    return StatusCode(500, "Error");
+                }
             }
             else if (result.Transaction != null)
             {
