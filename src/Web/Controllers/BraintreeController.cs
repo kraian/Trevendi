@@ -1,20 +1,24 @@
 ﻿using Braintree;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Web.Braintree;
 using Web.Database;
 using Web.Models;
+using Web.Utils;
 
 namespace Web.Controllers
 {
     public class BraintreeController : Controller
     {
+        private readonly IConfiguration _configuration;
         private readonly IBraintreeConfig _braintreeConfig;
         private readonly AppDbContext _db;
 
-        public BraintreeController(IBraintreeConfig braintreeConfig, AppDbContext db)
+        public BraintreeController(IConfiguration configuration, IBraintreeConfig braintreeConfig, AppDbContext db)
         {
+            _configuration = configuration;
             _braintreeConfig = braintreeConfig;
             _db = db;
         }
@@ -64,9 +68,11 @@ namespace Web.Controllers
             Result<Transaction> result = gateway.Transaction.Sale(request);
             if (result.IsSuccess())
             {
+                string marketplaceUrl = _configuration.GetSection("Arcadier").GetSection("MarketplaceUrl").Value;
+
                 using (var httpClient = new HttpClient())
                 {
-                    string url = "https://eventbooking.sandbox.arcadier.io/user/checkout/transaction-status";
+                    string url = UrlHelper.GetTransactionStatusUrl(marketplaceUrl);
                     HttpResponseMessage response = await httpClient.PostAsJsonAsync(url, new
                     {
                         invoiceno = paymentDetails.InvoiceNo,
@@ -78,7 +84,8 @@ namespace Web.Controllers
 
                     if (response.IsSuccessStatusCode)
                     {
-                        return Redirect($"https://eventbooking.sandbox.arcadier.io/user/checkout/current-status?invoiceNo={paymentDetails.InvoiceNo}");
+                        url = UrlHelper.GetCurrentStatusUrl(marketplaceUrl, paymentDetails.InvoiceNo);
+                        return Redirect(url);
                         //return Ok(result.Target.Id);
                     }
 
@@ -91,7 +98,7 @@ namespace Web.Controllers
             }
             else
             {
-                string errorMessages = "";
+                string errorMessages = string.Empty;
                 foreach (ValidationError error in result.Errors.DeepAll())
                 {
                     errorMessages += "Error: " + (int)error.Code + " - " + error.Message + "\n";
