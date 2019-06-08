@@ -17,7 +17,7 @@ namespace Web.Controllers
         public ActionResult<string> GeneratePaykey([FromBody] PaymentRequest request)
         {
             string payKey = Utils.Utils.GenerateRandomId(10);
-            var paymentDetails = new GenericPayment
+            var paymentDetails = new PaymentDetails
             {
                 Amount = request.total,
                 InvoiceNo = request.invoiceno,

@@ -1,6 +1,8 @@
 ﻿using Braintree;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Web.Braintree;
@@ -12,12 +14,17 @@ namespace Web.Controllers
 {
     public class BraintreeController : Controller
     {
+        private const string Success = "success";
+        private const string Failure = "failed";
+
+        private readonly ILogger<BraintreeController> _logger;
         private readonly IConfiguration _configuration;
         private readonly IBraintreeConfig _braintreeConfig;
         private readonly AppDbContext _db;
 
-        public BraintreeController(IConfiguration configuration, IBraintreeConfig braintreeConfig, AppDbContext db)
+        public BraintreeController(ILogger<BraintreeController> logger, IConfiguration configuration, IBraintreeConfig braintreeConfig, AppDbContext db)
         {
+            _logger = logger;
             _configuration = configuration;
             _braintreeConfig = braintreeConfig;
             _db = db;
@@ -26,32 +33,40 @@ namespace Web.Controllers
         [HttpGet]
         public IActionResult Payment(string invoiceNo, string paykey)
         {
-            GenericPayment paymentDetails = _db.GetDetails(paykey);
-            if (paymentDetails != null)
+            PaymentDetails paymentDetails = _db.GetDetails(paykey);
+            if (paymentDetails == null)
             {
-                IBraintreeGateway gateway = _braintreeConfig.GetGateway();
-
-                var model = new PaymentViewModel
-                {
-                    InvoiceNo = paymentDetails.InvoiceNo,
-                    PayKey = paykey,
-                    Amount = paymentDetails.Amount,
-                    ClientToken = gateway.ClientToken.Generate()
-                };
-
-                return View(model);
+                _logger.LogWarning("Payment details are null.");
+                return RedirectToArcadier(invoiceNo);
             }
 
-            return null;
+            IBraintreeGateway gateway = _braintreeConfig.GetGateway();
+
+            var model = new PaymentViewModel
+            {
+                InvoiceNo = paymentDetails.InvoiceNo,
+                PayKey = paykey,
+                Amount = paymentDetails.Amount,
+                ClientToken = gateway.ClientToken.Generate()
+            };
+
+            return View(model);
         }
 
         [HttpPost]
-        public async Task<ActionResult<string>> Payment([FromBody] CreatePaymentViewModel model)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Payment(CreatePaymentViewModel model)
         {
-            GenericPayment paymentDetails = _db.GetDetails(model.PayKey);
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            PaymentDetails paymentDetails = _db.GetDetails(model.PayKey);
             if (paymentDetails == null)
             {
-                return BadRequest("Cannot find payment details.");
+                _logger.LogWarning("Payment details are null.");
+                return RedirectToArcadier(model.InvoiceNo);
             }
 
             IBraintreeGateway gateway = _braintreeConfig.GetGateway();
@@ -65,8 +80,20 @@ namespace Web.Controllers
                 }
             };
 
+            string status = Success;
             Result<Transaction> result = gateway.Transaction.Sale(request);
-            if (result.IsSuccess())
+            if (!result.IsSuccess() && result.Transaction == null)
+            {
+                status = Failure;
+            }
+
+            await SetArcadierTransactionStatus(status, paymentDetails);
+            return RedirectToArcadier(paymentDetails.InvoiceNo);
+        }
+
+        private async Task<bool> SetArcadierTransactionStatus(string status, PaymentDetails paymentDetails)
+        {
+            try
             {
                 string marketplaceUrl = _configuration.GetSection("Arcadier").GetSection("MarketplaceUrl").Value;
 
@@ -79,33 +106,25 @@ namespace Web.Controllers
                         hashkey = paymentDetails.Hashkey,
                         gateway = paymentDetails.Gateway,
                         paykey = paymentDetails.PayKey,
-                        status = "success"
+                        status = status
                     });
 
-                    if (response.IsSuccessStatusCode)
-                    {
-                        url = UrlHelper.GetCurrentStatusUrl(marketplaceUrl, paymentDetails.InvoiceNo);
-                        return Redirect(url);
-                        //return Ok(result.Target.Id);
-                    }
-
-                    return StatusCode(500, "Error");
+                    return response.IsSuccessStatusCode;
                 }
             }
-            else if (result.Transaction != null)
+            catch (Exception ex)
             {
-                return Ok(result.Transaction.Id);
+                _logger.LogError(ex, "An error has occured while calling Arcadier to update the invoice.");
             }
-            else
-            {
-                string errorMessages = string.Empty;
-                foreach (ValidationError error in result.Errors.DeepAll())
-                {
-                    errorMessages += "Error: " + (int)error.Code + " - " + error.Message + "\n";
-                }
 
-                return StatusCode(500, errorMessages);
-            }
+            return false;
+        }
+
+        private RedirectResult RedirectToArcadier(string invoiceNo)
+        {
+            string marketplaceUrl = _configuration.GetSection("Arcadier").GetSection("MarketplaceUrl").Value;
+            string url = UrlHelper.GetCurrentStatusUrl(marketplaceUrl, invoiceNo);
+            return Redirect(url);
         }
     }
 }

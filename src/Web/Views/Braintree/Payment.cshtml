@@ -54,27 +54,25 @@
     </script>
 </head>
 <body>
-    <div class="container">
-        <h5>Invoice payment: @Model.InvoiceNo</h5>
+    <div class="container d-flex justify-content-center align-items-center p-4">
+        <div class="row">
+            <input type="hidden" asp-for="ClientToken" />
+            <form id="PaymentForm" asp-controller="Braintree" asp-action="Payment" method="post" style="display: none;">
+                <input type="hidden" asp-for="PayKey" />
+                <input type="hidden" asp-for="InvoiceNo" />
+                <input id="PaymentMethodNonce" name="PaymentMethodNonce" type="hidden" />
 
-        <input type="hidden" asp-for="ClientToken" />
-        <input type="hidden" asp-for="PayKey" />
-        <input id="PaymentMethodNonce" name="PaymentMethodNonce" type="hidden" />
-
-        <div class="row">
-            <div class="col">
-                <span class="input-label">Amount: @Model.Amount</span>&nbsp;&euro;
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <div id="dropin-container"></div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
-                <button id="Pay" class="button" type="button">Pay</button>
-            </div>
+                <div class="form-group">
+                    <p><strong>Invoice number:</strong> @Model.InvoiceNo</p>
+                    <p><strong>Amount: </strong> @Model.Amount &nbsp;&euro;</p>
+                </div>
+                <div class="form-group">
+                    <div id="Dropin"></div>
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="Pay" class="btn btn-primary btn-lg btn-block" />
+                </div>
+            </form>
         </div>
     </div>
 </body>

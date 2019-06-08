@@ -14,7 +14,7 @@ namespace Web.Controllers
         public IActionResult Checkout()
         {
             string redirectUrl = Url.Action("Payment", "Braintree", null, "https");
-            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=o2n7dznbRa");
+            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=8fmc4cvS62");
         }
 
         public IActionResult Privacy()

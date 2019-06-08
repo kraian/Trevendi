@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System;
 using System.IO;
 using Web.Models;
 
@@ -7,47 +9,52 @@ namespace Web.Database
 {
     public class AppDbContext
     {
+        private readonly ILogger<AppDbContext> _logger;
         private readonly IHostingEnvironment _hostingEnvironment;
 
-        public AppDbContext(IHostingEnvironment hostingEnvironment)
+        public AppDbContext(ILogger<AppDbContext> logger, IHostingEnvironment hostingEnvironment)
         {
+            _logger = logger;
             _hostingEnvironment = hostingEnvironment;
         }
 
-        public GenericPayment GetDetails(string name)
+        public PaymentDetails GetDetails(string name)
         {
             if (string.IsNullOrEmpty(name))
             {
+                _logger.LogWarning("Name is required.");
                 return null;
             }
 
             string path = GetDataStorePath(name);
-            if (File.Exists(path))
+            if (!File.Exists(path))
             {
-                string settingsValue = File.ReadAllText(path);
-                return JsonConvert.DeserializeObject<GenericPayment>(settingsValue);
+                _logger.LogWarning($"Cannot find payment details for file with name '{name}'.");
+                return null;
             }
 
-            return null;
+            string settingsValue = File.ReadAllText(path);
+            return JsonConvert.DeserializeObject<PaymentDetails>(settingsValue);
         }
 
-        public bool SaveDetails(string name, GenericPayment payment)
+        public bool SaveDetails(string name, PaymentDetails paymentDetails)
         {
             if (string.IsNullOrEmpty(name))
             {
+                _logger.LogWarning("Name is required.");
                 return false;
             }
 
             try
             {
                 string path = GetDataStorePath(name);
-                string output = JsonConvert.SerializeObject(payment, Formatting.None);
+                string output = JsonConvert.SerializeObject(paymentDetails, Formatting.None);
                 File.WriteAllText(path, output);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                // log the error
+                _logger.LogError(ex, "An error has occured while saving the details.");
             }
 
             return false;

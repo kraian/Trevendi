@@ -3,7 +3,7 @@ using System;
 
 namespace Web.Models
 {
-    public class GenericPayment
+    public class PaymentDetails
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string MarketplaceUrl { get; set; }
