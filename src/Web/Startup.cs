@@ -29,9 +29,10 @@ namespace Web
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            services.AddCors(o => o.AddPolicy("AllowAllPolicy", builder =>
+            string marketplaceUrl = Configuration.GetSection("Arcadier").GetSection("MarketplaceUrl").Value;
+            services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
             {
-                builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+                builder.WithOrigins(marketplaceUrl).AllowAnyMethod().AllowAnyHeader();
             }));
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
@@ -59,7 +60,7 @@ namespace Web
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseCookiePolicy();
-            app.UseCors("AllowAllPolicy");
+            app.UseCors("MyPolicy");
 
             app.UseMvc(routes =>
             {

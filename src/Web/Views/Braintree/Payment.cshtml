@@ -44,7 +44,7 @@
                 integrity="sha384-xrRywqdh3PHs8keKZN+8zzc5TX0GRTLCcmivcbNJWm2rs5C8PRhcEn3czEjhAO9o">
         </script>
         <script src="https://js.braintreegateway.com/web/dropin/1.18.0/js/dropin.min.js"></script>
-        <script src="~/js/payment.min.js" asp-append-version="true"></script>
+        <script src="~/js/site.min.js" asp-append-version="true"></script>
     </environment>
     
     <script>
@@ -64,7 +64,7 @@
 
                 <div class="form-group">
                     <p><strong>Invoice number:</strong> @Model.InvoiceNo</p>
-                    <p><strong>Amount: </strong> @Model.Amount &nbsp;&euro;</p>
+                    <p><strong>Amount: </strong> @Model.Amount @Model.Currency</p>
                 </div>
                 <div class="form-group">
                     <div id="Dropin"></div>

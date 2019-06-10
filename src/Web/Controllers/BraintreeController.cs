@@ -47,6 +47,7 @@ namespace Web.Controllers
                 InvoiceNo = paymentDetails.InvoiceNo,
                 PayKey = paykey,
                 Amount = paymentDetails.Amount,
+                Currency = paymentDetails.Currency,
                 ClientToken = gateway.ClientToken.Generate()
             };
 
@@ -80,14 +81,19 @@ namespace Web.Controllers
                 }
             };
 
-            string status = Success;
+            PaymentStatus status = PaymentStatus.Success;
             Result<Transaction> result = gateway.Transaction.Sale(request);
+            
             if (!result.IsSuccess() && result.Transaction == null)
             {
-                status = Failure;
+                status = PaymentStatus.Failure;
             }
 
-            await SetArcadierTransactionStatus(status, paymentDetails);
+            paymentDetails.PaymentStatus = status;
+            _db.SaveDetails(model.PayKey, paymentDetails);
+
+            string statusText = status == PaymentStatus.Success ? Success : Failure;
+            await SetArcadierTransactionStatus(statusText, paymentDetails);
             return RedirectToArcadier(paymentDetails.InvoiceNo);
         }
 

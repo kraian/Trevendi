@@ -60,6 +60,18 @@ namespace Web.Database
             return false;
         }
 
+        public bool Exists(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                _logger.LogWarning("Name is required.");
+                return false;
+            }
+
+            string path = GetDataStorePath(name);
+            return File.Exists(path);
+        }
+
         private string GetDataStorePath(string name)
         {
             return $"{_hostingEnvironment.ContentRootPath}\\Database\\Data\\{name}.json";

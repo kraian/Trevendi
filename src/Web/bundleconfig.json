@@ -6,9 +6,10 @@
     ]
   },
   {
-    "outputFileName": "wwwroot/js/payment.min.js",
+    "outputFileName": "wwwroot/js/site.min.js",
     "inputFiles": [
-      "wwwroot/js/payment.js"
+      "wwwroot/js/*.js"
+
     ],
     "minify": {
       "enabled": true,

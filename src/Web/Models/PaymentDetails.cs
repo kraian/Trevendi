@@ -6,9 +6,6 @@ namespace Web.Models
     public class PaymentDetails
     {
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public string MarketplaceUrl { get; set; }
-
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string InvoiceNo { get; set; }
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
@@ -31,5 +28,8 @@ namespace Web.Models
 
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string Note { get; set; }
+
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public PaymentStatus PaymentStatus { get; set; }
     }
 }
