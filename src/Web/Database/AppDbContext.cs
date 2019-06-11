@@ -9,6 +9,7 @@ namespace Web.Database
 {
     public class AppDbContext
     {
+        private const string RelativeDataPath = "Database\\Data";
         private readonly ILogger<AppDbContext> _logger;
         private readonly IHostingEnvironment _hostingEnvironment;
 
@@ -74,7 +75,7 @@ namespace Web.Database
 
         private string GetDataStorePath(string name)
         {
-            return $"{_hostingEnvironment.ContentRootPath}\\Database\\Data\\{name}.json";
+            return Path.Combine(_hostingEnvironment.ContentRootPath, RelativeDataPath, $"{name}.json");
         }
     }
 }

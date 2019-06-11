@@ -41,7 +41,8 @@ namespace Web.Controllers
                 PayKey = payKey,
                 Gateway = request.gateway,
                 Hashkey = request.hashkey,
-                PaymentStatus = PaymentStatus.New
+                TransactionStatus = TransactionStatus.New,
+                ArcadierTransactionStatus = TransactionStatus.New
             };
 
             _db.SaveDetails(payKey, paymentDetails);

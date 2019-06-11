@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -81,23 +82,28 @@ namespace Web.Controllers
                 }
             };
 
-            PaymentStatus status = PaymentStatus.Success;
+            paymentDetails.TransactionStatus = Models.TransactionStatus.Success;
             Result<Transaction> result = gateway.Transaction.Sale(request);
             
             if (!result.IsSuccess() && result.Transaction == null)
             {
-                status = PaymentStatus.Failure;
+                paymentDetails.TransactionStatus = Models.TransactionStatus.Failure;
             }
 
-            paymentDetails.PaymentStatus = status;
-            _db.SaveDetails(model.PayKey, paymentDetails);
+            string statusText = paymentDetails.TransactionStatus == Models.TransactionStatus.Success ? Success : Failure;
+            bool arcadierSuccess = await SetArcadierTransactionStatusAsync(statusText, paymentDetails);
 
-            string statusText = status == PaymentStatus.Success ? Success : Failure;
-            await SetArcadierTransactionStatus(statusText, paymentDetails);
+            paymentDetails.ArcadierTransactionStatus = Models.TransactionStatus.Success;
+            if (!arcadierSuccess)
+            {
+                paymentDetails.ArcadierTransactionStatus = Models.TransactionStatus.Failure;
+            }
+
+            _db.SaveDetails(model.PayKey, paymentDetails);
             return RedirectToArcadier(paymentDetails.InvoiceNo);
         }
 
-        private async Task<bool> SetArcadierTransactionStatus(string status, PaymentDetails paymentDetails)
+        private async Task<bool> SetArcadierTransactionStatusAsync(string status, PaymentDetails paymentDetails)
         {
             try
             {
@@ -115,15 +121,34 @@ namespace Web.Controllers
                         status = status
                     });
 
-                    return response.IsSuccessStatusCode;
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning($"Error posting to {url}.");
+                        return false;
+                    }
+
+                    string text = await response.Content.ReadAsStringAsync();
+                    ArcadierResponse arcadierResponse = JsonConvert.DeserializeObject<ArcadierResponse>(text);
+                    if (arcadierResponse == null)
+                    {
+                        _logger.LogWarning($"Arcadier response is null.");
+                        return false;
+                    }
+
+                    if (!arcadierResponse.Success)
+                    {
+                        _logger.LogWarning(arcadierResponse.Error);
+                        return false;
+                    }
+
+                    return true;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error has occured while calling Arcadier to update the invoice.");
+                return false;
             }
-
-            return false;
         }
 
         private RedirectResult RedirectToArcadier(string invoiceNo)

@@ -29,7 +29,8 @@ namespace Web.Models
         [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
         public string Note { get; set; }
 
-        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-        public PaymentStatus PaymentStatus { get; set; }
+        public TransactionStatus TransactionStatus { get; set; }
+
+        public TransactionStatus ArcadierTransactionStatus { get; set; }
     }
 }
