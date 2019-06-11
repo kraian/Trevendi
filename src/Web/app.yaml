@@ -22,3 +22,6 @@ resources:
 
 # network:
 #   session_affinity: true
+
+# env_variables:
+#   My__Greeting: Hello AppEngine!
