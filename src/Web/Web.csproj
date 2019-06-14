@@ -20,14 +20,14 @@
 
 
   <ItemGroup>
-    <Folder Include="Database\Data\" />
+    <None Update="app.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 
   <ItemGroup>
-    <None Update="app.yaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <Folder Include="Database\Data\" />
   </ItemGroup>
 
 </Project>
