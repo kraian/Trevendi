@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Web.Braintree;
 using Web.Database;
+using Web.Models;
 
 namespace Web
 {
@@ -39,6 +40,7 @@ namespace Web
 
             services.AddSingleton<AppDbContext>();
             services.AddSingleton<IBraintreeConfig, BraintreeConfig>();
+            services.Configure<ArcadierSettings>(Configuration.GetSection("Arcadier"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
