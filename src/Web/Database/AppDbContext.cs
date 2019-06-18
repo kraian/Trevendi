@@ -75,7 +75,13 @@ namespace Web.Database
 
         private string GetDataStorePath(string name)
         {
-            return Path.Combine(_hostingEnvironment.ContentRootPath, RelativeDataPath, $"{name}.json");
+            string folderPath = Path.Combine(_hostingEnvironment.ContentRootPath, RelativeDataPath);
+            if (!Directory.Exists(folderPath))
+            {
+                Directory.CreateDirectory(folderPath);
+            }
+
+            return Path.Combine(folderPath, $"{name}.json");
         }
     }
 }
