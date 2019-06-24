@@ -1,0 +1,79 @@
+﻿@model PaymentViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment</title>
+
+    <environment include="Development">
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+    </environment>
+    <environment exclude="Development">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+              asp-fallback-href="~/lib/bootstrap/dist/css/bootstrap.min.css"
+              asp-fallback-test-class="sr-only" asp-fallback-test-property="position" asp-fallback-test-value="absolute"
+              crossorigin="anonymous"
+              integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" />
+    </environment>
+    <link rel="stylesheet" href="~/css/site.css" />
+
+    <environment include="Development">
+        <script src="~/lib/jquery/dist/jquery.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.js"></script>
+        <script src="https://js.braintreegateway.com/web/dropin/1.18.0/js/dropin.js"></script>
+        <script src="~/js/payment.js" asp-append-version="true"></script>
+    </environment>
+    <environment exclude="Development">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"
+                asp-fallback-src="~/lib/jquery/dist/jquery.min.js"
+                asp-fallback-test="window.jQuery"
+                crossorigin="anonymous"
+                integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=">
+        </script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"
+                asp-fallback-src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"
+                asp-fallback-test="window.jQuery && window.jQuery.fn && window.jQuery.fn.modal"
+                crossorigin="anonymous"
+                integrity="sha384-xrRywqdh3PHs8keKZN+8zzc5TX0GRTLCcmivcbNJWm2rs5C8PRhcEn3czEjhAO9o">
+        </script>
+        <script src="https://js.braintreegateway.com/web/dropin/1.18.0/js/dropin.min.js"></script>
+        <script src="~/js/site.min.js" asp-append-version="true"></script>
+    </environment>
+    
+    <script>
+        $(document).ready(function () {
+            Payment.init();
+        });
+    </script>
+</head>
+<body>
+    <div class="container d-flex justify-content-center align-items-center p-4">
+        <div class="row">
+            <input type="hidden" asp-for="ClientToken" />
+            <form id="PaymentForm" asp-controller="Braintree" asp-action="Payment" method="post" style="display: none;">
+                <input type="hidden" asp-for="PayKey" />
+                <input type="hidden" asp-for="InvoiceNo" />
+                <input id="PaymentMethodNonce" name="PaymentMethodNonce" type="hidden" />
+
+                <div class="form-group">
+                    <p><strong>Invoice number:</strong> @Model.InvoiceNo</p>
+                    <p><strong>Amount: </strong> @Model.Amount @Model.Currency</p>
+                </div>
+                <div class="form-group">
+                    <div id="Dropin"></div>
+                </div>
+                <div class="form-group">
+                    <input type="submit" value="Pay" class="btn btn-primary btn-lg btn-block" />
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
