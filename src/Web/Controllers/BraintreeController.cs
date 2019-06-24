@@ -1,16 +1,12 @@
-﻿using Braintree;
+﻿using ApplicationCore.Entities;
+using ApplicationCore.Interfaces;
+using Braintree;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using System;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Web.Braintree;
-using Web.Database;
 using Web.Models;
-using Web.Utils;
+using Web.Services;
 
 namespace Web.Controllers
 {
@@ -20,43 +16,41 @@ namespace Web.Controllers
         private const string Failure = "failed";
 
         private readonly ILogger<BraintreeController> _logger;
-        private readonly IConfiguration _configuration;
         private readonly IBraintreeConfig _braintreeConfig;
-        private readonly IOptions<ArcadierSettings> _arcadierSettings;
-        private readonly AppDbContext _db;
+        private readonly IPaymentService _paymentService;
+        private readonly ArcadierService _arcadierService;
 
         public BraintreeController(
             ILogger<BraintreeController> logger,
-            IConfiguration configuration,
             IBraintreeConfig braintreeConfig,
-            IOptions<ArcadierSettings> arcadierSettings,
-            AppDbContext db)
+            IPaymentService paymentService,
+            ArcadierService arcadierService)
         {
             _logger = logger;
-            _configuration = configuration;
             _braintreeConfig = braintreeConfig;
-            _arcadierSettings = arcadierSettings;
-            _db = db;
+            _paymentService = paymentService;
+            _arcadierService = arcadierService;
         }
 
         [HttpGet]
-        public IActionResult Payment(string invoiceNo, string paykey)
+        public async Task<IActionResult> Payment(string invoiceNo, string paykey)
         {
-            PaymentDetails paymentDetails = _db.GetDetails(paykey);
-            if (paymentDetails == null)
+            var result = await _paymentService.GetByPayKeyAsync(paykey);
+            if (result.IsFailure)
             {
-                _logger.LogWarning("Payment details are null.");
+                _logger.LogError(result.Error);
                 return RedirectToArcadier(invoiceNo);
             }
 
+            PaymentDetails payment = result.Value;
             IBraintreeGateway gateway = _braintreeConfig.GetGateway();
 
             var model = new PaymentViewModel
             {
-                InvoiceNo = paymentDetails.InvoiceNo,
+                InvoiceNo = payment.InvoiceNo,
                 PayKey = paykey,
-                Amount = paymentDetails.Amount,
-                Currency = paymentDetails.Currency,
+                Amount = payment.Amount,
+                Currency = payment.Currency,
                 ClientToken = gateway.ClientToken.Generate()
             };
 
@@ -72,21 +66,25 @@ namespace Web.Controllers
                 return View(model);
             }
 
-            PaymentDetails paymentDetails = _db.GetDetails(model.PayKey);
-            if (paymentDetails == null)
+            var result = await _paymentService.GetByPayKeyAsync(model.PayKey);
+            if (result.IsFailure)
             {
-                _logger.LogWarning("Payment details are null.");
+                _logger.LogError(result.Error);
+                return RedirectToArcadier(model.InvoiceNo);
+            }
+            
+            PaymentDetails payment = result.Value;
+            if (payment.TransactionStatus == ApplicationCore.Entities.TransactionStatus.Success)
+            {
+                _logger.LogError("Transaction already paid.");
                 return RedirectToArcadier(model.InvoiceNo);
             }
 
-            IBraintreeGateway gateway = _braintreeConfig.GetGateway();
-
-            decimal adminFee = paymentDetails.Amount * _arcadierSettings.Value.Commission / 100;
-            decimal amount = paymentDetails.Amount - adminFee;
+            SplitAmount splitAmount = _arcadierService.GetSplitAmount(payment.Amount);
 
             var request = new TransactionRequest
             {
-                Amount = amount,
+                Amount = splitAmount.MerchantAmount,
                 PaymentMethodNonce = model.PaymentMethodNonce,
                 Options = new TransactionOptionsRequest
                 {
@@ -94,77 +92,33 @@ namespace Web.Controllers
                 }
             };
 
-            Result<Transaction> result = await gateway.Transaction.SaleAsync(request);
+            IBraintreeGateway gateway = _braintreeConfig.GetGateway();
+            Result<Transaction> transactionResult = await gateway.Transaction.SaleAsync(request);
 
-            paymentDetails.TransactionStatus = Models.TransactionStatus.Success;
-            if (!result.IsSuccess() && result.Transaction == null)
+            payment.TransactionStatus = ApplicationCore.Entities.TransactionStatus.Success;
+            if (!transactionResult.IsSuccess() && transactionResult.Transaction == null)
             {
-                paymentDetails.TransactionStatus = Models.TransactionStatus.Failure;
+                payment.TransactionStatus = ApplicationCore.Entities.TransactionStatus.Failure;
             }
 
-            string statusText = paymentDetails.TransactionStatus == Models.TransactionStatus.Success ? Success : Failure;
-            bool arcadierSuccess = await SetArcadierTransactionStatusAsync(statusText, paymentDetails);
+            string statusText = payment.TransactionStatus == ApplicationCore.Entities.TransactionStatus.Success ? Success : Failure;
+            bool arcadierSuccess = await _arcadierService.SetArcadierTransactionStatusAsync(statusText, payment);
 
-            paymentDetails.ArcadierTransactionStatus = Models.TransactionStatus.Success;
+            payment.ArcadierTransactionStatus = ApplicationCore.Entities.TransactionStatus.Success;
             if (!arcadierSuccess)
             {
-                paymentDetails.ArcadierTransactionStatus = Models.TransactionStatus.Failure;
+                payment.ArcadierTransactionStatus = ApplicationCore.Entities.TransactionStatus.Failure;
             }
 
-            _db.SaveDetails(model.PayKey, paymentDetails);
-            return RedirectToArcadier(paymentDetails.InvoiceNo);
-        }
+            await _paymentService.UpdateAsync(payment);
 
-        private async Task<bool> SetArcadierTransactionStatusAsync(string status, PaymentDetails paymentDetails)
-        {
-            try
-            {
-                using (var httpClient = new HttpClient())
-                {
-                    string url = UrlHelper.GetTransactionStatusUrl(_arcadierSettings.Value.MarketplaceUrl);
-                    HttpResponseMessage response = await httpClient.PostAsJsonAsync(url, new
-                    {
-                        invoiceno = paymentDetails.InvoiceNo,
-                        hashkey = paymentDetails.Hashkey,
-                        gateway = paymentDetails.Gateway,
-                        paykey = paymentDetails.PayKey,
-                        status = status
-                    });
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        _logger.LogWarning($"Error posting to {url}.");
-                        return false;
-                    }
-
-                    string text = await response.Content.ReadAsStringAsync();
-                    ArcadierResponse arcadierResponse = JsonConvert.DeserializeObject<ArcadierResponse>(text);
-                    if (arcadierResponse == null)
-                    {
-                        _logger.LogWarning($"Arcadier response is null.");
-                        return false;
-                    }
-
-                    if (!arcadierResponse.Success)
-                    {
-                        _logger.LogWarning(arcadierResponse.Error);
-                        return false;
-                    }
-
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error has occured while calling Arcadier to update the invoice.");
-                return false;
-            }
+            return RedirectToArcadier(payment.InvoiceNo);
         }
 
         private RedirectResult RedirectToArcadier(string invoiceNo)
         {
-            string url = UrlHelper.GetCurrentStatusUrl(_arcadierSettings.Value.MarketplaceUrl, invoiceNo);
-            return Redirect(url);
+            string redirectUrl = _arcadierService.GetRedirectUrl(invoiceNo);
+            return Redirect(redirectUrl);
         }
     }
 }

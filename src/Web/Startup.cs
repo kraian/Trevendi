@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using ApplicationCore.Interfaces;
+using ApplicationCore.Services;
+using Infrastructure;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -6,8 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Web.Braintree;
-using Web.Database;
 using Web.Models;
+using Web.Services;
 
 namespace Web
 {
@@ -38,9 +41,14 @@ namespace Web
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            services.AddSingleton<AppDbContext>();
             services.AddSingleton<IBraintreeConfig, BraintreeConfig>();
             services.Configure<ArcadierSettings>(Configuration.GetSection("Arcadier"));
+
+            string projectId = Configuration.GetSection("GoogleCloud").GetSection("ProjectId").Value;
+            services.AddScoped<IPaymentRepository>(s => new PaymentRepository(projectId));
+
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<ArcadierService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

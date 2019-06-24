@@ -1,4 +1,4 @@
-﻿namespace Web.Models
+﻿namespace ApplicationCore.Entities
 {
     public enum TransactionStatus
     {

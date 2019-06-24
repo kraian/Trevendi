@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using ApplicationCore.Entities;
+using ApplicationCore.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Web.Database;
+using System.Threading.Tasks;
 using Web.Models;
 
 namespace Web.Controllers
@@ -8,46 +10,36 @@ namespace Web.Controllers
     public class PaymentController : Controller
     {
         private readonly ILogger<PaymentController> _logger;
-        private readonly AppDbContext _db;
+        private readonly IPaymentService _paymentService;
 
-        public PaymentController(ILogger<PaymentController> logger, AppDbContext db)
+        public PaymentController(ILogger<PaymentController> logger, IPaymentService paymentService)
         {
             _logger = logger;
-            _db = db;
+            _paymentService = paymentService;
         }
 
         [HttpPost]
-        public ActionResult<string> GeneratePaykey([FromBody] PaymentRequest request)
+        public async Task<ActionResult<string>> GeneratePaykey([FromBody] PaymentRequest request)
         {
-            string payKey = Utils.Utils.GenerateRandomId(10);
-
-            int collisions = 0;
-            while (_db.Exists(payKey))
-            {
-                payKey = Utils.Utils.GenerateRandomId(10);
-                collisions++;
-            }
-
-            if (collisions > 0)
-            {
-                _logger.LogWarning($"Generate paykey with {collisions} collisions.");
-            }
-
             var paymentDetails = new PaymentDetails
             {
                 Amount = request.total,
                 InvoiceNo = request.invoiceno,
                 Currency = request.currency,
-                PayKey = payKey,
                 Gateway = request.gateway,
                 Hashkey = request.hashkey,
                 TransactionStatus = TransactionStatus.New,
                 ArcadierTransactionStatus = TransactionStatus.New
             };
 
-            _db.SaveDetails(payKey, paymentDetails);
+            var result = await _paymentService.AddAsync(paymentDetails);
+            if (result.IsFailure)
+            {
+                _logger.LogError(result.Error);
+                return BadRequest(result.Error);
+            }
 
-            return payKey;
+            return result.Value;
         }
     }
 }

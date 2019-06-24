@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Web.Utils
+namespace ApplicationCore.Utils
 {
     public static class Utils
     {

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Web.Models;
 
@@ -14,7 +15,7 @@ namespace Web.Controllers
         public IActionResult Checkout()
         {
             string redirectUrl = Url.Action("Payment", "Braintree", null, "https");
-            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=8fmc4cvS62");
+            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=yFMLWxnKVj");
         }
 
         public IActionResult Privacy()
