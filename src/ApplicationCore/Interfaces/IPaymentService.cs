@@ -6,8 +6,9 @@ namespace ApplicationCore.Interfaces
 {
     public interface IPaymentService
     {
+        Task<string> GeneratePayKeyAsync();
         Task<Result<PaymentDetails>> GetByPayKeyAsync(string payKey);
-        Task<Result<string>> AddAsync(PaymentDetails payment);
+        Task<Result> AddAsync(PaymentDetails payment);
         Task<Result> UpdateAsync(PaymentDetails payment);
     }
 }

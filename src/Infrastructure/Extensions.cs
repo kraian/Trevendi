@@ -27,16 +27,16 @@ namespace Infrastructure
                 [nameof(PaymentDetails.AmountInternal)] = payment.AmountInternal,
                 [nameof(PaymentDetails.Hashkey)] = payment.Hashkey,
                 [nameof(PaymentDetails.Gateway)] = payment.Gateway,
-                [nameof(PaymentDetails.TransactionStatus)] = (int)payment.TransactionStatus,
-                [nameof(PaymentDetails.ArcadierTransactionStatus)] = (int)payment.ArcadierTransactionStatus,
+                [nameof(PaymentDetails.BraintreeStatus)] = (int)payment.BraintreeStatus,
+                [nameof(PaymentDetails.ArcadierStatus)] = (int)payment.ArcadierStatus,
                 [nameof(PaymentDetails.CreatedAt)] = payment.CreatedAt
             };
         }
 
         public static PaymentDetails ToPayment(this Entity entity)
         {
-            int transactionStatus = (int)entity[nameof(PaymentDetails.TransactionStatus)];
-            int arcadierTransactionStatus = (int)entity[nameof(PaymentDetails.ArcadierTransactionStatus)];
+            int transactionStatus = (int)entity[nameof(PaymentDetails.BraintreeStatus)];
+            int arcadierTransactionStatus = (int)entity[nameof(PaymentDetails.ArcadierStatus)];
 
             return new PaymentDetails
             {
@@ -46,8 +46,8 @@ namespace Infrastructure
                 AmountInternal = (string)entity[nameof(PaymentDetails.AmountInternal)],
                 Hashkey = (string)entity[nameof(PaymentDetails.Hashkey)],
                 Gateway = (string)entity[nameof(PaymentDetails.Gateway)],
-                TransactionStatus = (TransactionStatus)transactionStatus,
-                ArcadierTransactionStatus = (TransactionStatus)arcadierTransactionStatus,
+                BraintreeStatus = (TransactionStatus)transactionStatus,
+                ArcadierStatus = (TransactionStatus)arcadierTransactionStatus,
                 CreatedAt = (DateTime)entity[nameof(PaymentDetails.CreatedAt)]
             };
         }

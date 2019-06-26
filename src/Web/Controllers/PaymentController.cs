@@ -1,7 +1,9 @@
-﻿using ApplicationCore.Entities;
+﻿using ApplicationCore.Common;
+using ApplicationCore.Entities;
 using ApplicationCore.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Threading.Tasks;
 using Web.Models;
 
@@ -21,25 +23,30 @@ namespace Web.Controllers
         [HttpPost]
         public async Task<ActionResult<string>> GeneratePaykey([FromBody] PaymentRequest request)
         {
-            var paymentDetails = new PaymentDetails
+            try
             {
-                Amount = request.total,
-                InvoiceNo = request.invoiceno,
-                Currency = request.currency,
-                Gateway = request.gateway,
-                Hashkey = request.hashkey,
-                TransactionStatus = TransactionStatus.New,
-                ArcadierTransactionStatus = TransactionStatus.New
-            };
+                string payKey = await _paymentService.GeneratePayKeyAsync();
+                var paymentDetails = new PaymentDetails(payKey, request.total, request.invoiceno, request.currency, request.gateway, request.hashkey);
 
-            var result = await _paymentService.AddAsync(paymentDetails);
-            if (result.IsFailure)
+                var result = await _paymentService.AddAsync(paymentDetails);
+                if (result.IsFailure)
+                {
+                    _logger.LogError(result.Error);
+                    return BadRequest(result.Error);
+                }
+
+                return payKey;
+            }
+            catch (ContractException cex)
             {
-                _logger.LogError(result.Error);
-                return BadRequest(result.Error);
+                return BadRequest(cex.Message);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
             }
 
-            return result.Value;
+            return string.Empty;
         }
     }
 }

@@ -14,42 +14,7 @@ namespace ApplicationCore.Services
             _paymentRepository = paymentRepository;
         }
 
-        public async Task<Result<PaymentDetails>> GetByPayKeyAsync(string payKey)
-        {
-            if (string.IsNullOrWhiteSpace(payKey))
-            {
-                return Result.Fail<PaymentDetails>("PayKey is null.");
-            }
-
-            PaymentDetails payment = await _paymentRepository.GetByPayKeyAsync(payKey);
-            return Result.Ok(payment);
-        }
-
-        public async Task<Result<string>> AddAsync(PaymentDetails payment)
-        {
-            if (payment == null)
-            {
-                return Result.Fail<string>("PayKey is null.");
-            }
-
-            payment.PayKey = await GeneratePayKeyAsync();
-            await _paymentRepository.AddAsync(payment);
-
-            return Result.Ok(payment.PayKey);
-        }
-
-        public async Task<Result> UpdateAsync(PaymentDetails payment)
-        {
-            if (payment == null)
-            {
-                return Result.Fail("Payment is null.");
-            }
-
-            await _paymentRepository.UpdateAsync(payment);
-            return Result.Ok();
-        }
-
-        private async Task<string> GeneratePayKeyAsync()
+        public async Task<string> GeneratePayKeyAsync()
         {
             string payKey = Utils.Utils.GenerateRandomId(10);
             int collisions = 0;
@@ -69,6 +34,40 @@ namespace ApplicationCore.Services
             }
 
             return payKey;
+        }
+
+        public async Task<Result<PaymentDetails>> GetByPayKeyAsync(string payKey)
+        {
+            if (string.IsNullOrWhiteSpace(payKey))
+            {
+                return Result.Fail<PaymentDetails>("PayKey is null.");
+            }
+
+            PaymentDetails payment = await _paymentRepository.GetByPayKeyAsync(payKey);
+            return Result.Ok(payment);
+        }
+
+        public async Task<Result> AddAsync(PaymentDetails payment)
+        {
+            if (payment == null)
+            {
+                return Result.Fail<string>("Payment is null.");
+            }
+
+            await _paymentRepository.AddAsync(payment);
+
+            return Result.Ok();
+        }
+
+        public async Task<Result> UpdateAsync(PaymentDetails payment)
+        {
+            if (payment == null)
+            {
+                return Result.Fail("Payment is null.");
+            }
+
+            await _paymentRepository.UpdateAsync(payment);
+            return Result.Ok();
         }
     }
 }
