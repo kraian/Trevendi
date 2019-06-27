@@ -1,6 +1,6 @@
-﻿using ApplicationCore.Entities;
+﻿using ApplicationCore.Common;
+using ApplicationCore.Entities;
 using ApplicationCore.Interfaces;
-using CSharpFunctionalExtensions;
 using System.Threading.Tasks;
 
 namespace ApplicationCore.Services
@@ -36,38 +36,25 @@ namespace ApplicationCore.Services
             return payKey;
         }
 
-        public async Task<Result<PaymentDetails>> GetByPayKeyAsync(string payKey)
+        public async Task<PaymentDetails> GetByPayKeyAsync(string payKey)
         {
-            if (string.IsNullOrWhiteSpace(payKey))
-            {
-                return Result.Fail<PaymentDetails>("PayKey is null.");
-            }
+            Contract.Require(!string.IsNullOrWhiteSpace(payKey), "Paykey is null.");
 
-            PaymentDetails payment = await _paymentRepository.GetByPayKeyAsync(payKey);
-            return Result.Ok(payment);
+            return await _paymentRepository.GetByPayKeyAsync(payKey);
         }
 
-        public async Task<Result> AddAsync(PaymentDetails payment)
+        public async Task AddAsync(PaymentDetails payment)
         {
-            if (payment == null)
-            {
-                return Result.Fail<string>("Payment is null.");
-            }
+            Contract.Require(payment != null, "Payment is null.");
 
             await _paymentRepository.AddAsync(payment);
-
-            return Result.Ok();
         }
 
-        public async Task<Result> UpdateAsync(PaymentDetails payment)
+        public async Task UpdateAsync(PaymentDetails payment)
         {
-            if (payment == null)
-            {
-                return Result.Fail("Payment is null.");
-            }
+            Contract.Require(payment != null, "Payment is null.");
 
             await _paymentRepository.UpdateAsync(payment);
-            return Result.Ok();
         }
     }
 }

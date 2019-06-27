@@ -38,14 +38,13 @@ namespace Web.Controllers
         {
             try
             {
-                var result = await _paymentService.GetByPayKeyAsync(paykey);
-                if (result.IsFailure)
+                PaymentDetails payment = await _paymentService.GetByPayKeyAsync(paykey);
+                if (payment.BraintreeStatus == ApplicationCore.Entities.TransactionStatus.Success)
                 {
-                    _logger.LogError(result.Error);
-                    return RedirectToArcadier(invoiceNo);
+                    _logger.LogError($"Transaction with paykey '{paykey}' is already paid.");
+                    return RedirectToArcadier(payment.InvoiceNo);
                 }
 
-                PaymentDetails payment = result.Value;
                 IBraintreeGateway gateway = _braintreeConfig.GetGateway();
 
                 var model = new PaymentViewModel
@@ -78,17 +77,10 @@ namespace Web.Controllers
 
             try
             {
-                var result = await _paymentService.GetByPayKeyAsync(model.PayKey);
-                if (result.IsFailure)
-                {
-                    _logger.LogError(result.Error);
-                    return RedirectToArcadier(model.InvoiceNo);
-                }
-
-                PaymentDetails payment = result.Value;
+                PaymentDetails payment = await _paymentService.GetByPayKeyAsync(model.PayKey);
                 if (payment.BraintreeStatus == ApplicationCore.Entities.TransactionStatus.Success)
                 {
-                    _logger.LogError("Transaction already paid.");
+                    _logger.LogError($"Transaction with paykey '{model.PayKey}' is already paid.");
                     return RedirectToArcadier(model.InvoiceNo);
                 }
 
@@ -107,8 +99,11 @@ namespace Web.Controllers
                 IBraintreeGateway gateway = _braintreeConfig.GetGateway();
                 Result<Transaction> transactionResult = await gateway.Transaction.SaleAsync(request);
 
-                payment.BraintreeStatus = ApplicationCore.Entities.TransactionStatus.Success;
-                if (!transactionResult.IsSuccess() && transactionResult.Transaction == null)
+                if (transactionResult.IsSuccess())
+                {
+                    payment.BraintreeStatus = ApplicationCore.Entities.TransactionStatus.Success;
+                }
+                else
                 {
                     payment.BraintreeStatus = ApplicationCore.Entities.TransactionStatus.Failure;
                 }

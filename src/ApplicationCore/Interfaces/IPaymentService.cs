@@ -1,5 +1,4 @@
 ﻿using ApplicationCore.Entities;
-using CSharpFunctionalExtensions;
 using System.Threading.Tasks;
 
 namespace ApplicationCore.Interfaces
@@ -7,8 +6,8 @@ namespace ApplicationCore.Interfaces
     public interface IPaymentService
     {
         Task<string> GeneratePayKeyAsync();
-        Task<Result<PaymentDetails>> GetByPayKeyAsync(string payKey);
-        Task<Result> AddAsync(PaymentDetails payment);
-        Task<Result> UpdateAsync(PaymentDetails payment);
+        Task<PaymentDetails> GetByPayKeyAsync(string payKey);
+        Task AddAsync(PaymentDetails payment);
+        Task UpdateAsync(PaymentDetails payment);
     }
 }

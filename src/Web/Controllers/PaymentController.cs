@@ -1,5 +1,4 @@
-﻿using ApplicationCore.Common;
-using ApplicationCore.Entities;
+﻿using ApplicationCore.Entities;
 using ApplicationCore.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -28,18 +27,9 @@ namespace Web.Controllers
                 string payKey = await _paymentService.GeneratePayKeyAsync();
                 var paymentDetails = new PaymentDetails(payKey, request.total, request.invoiceno, request.currency, request.gateway, request.hashkey);
 
-                var result = await _paymentService.AddAsync(paymentDetails);
-                if (result.IsFailure)
-                {
-                    _logger.LogError(result.Error);
-                    return BadRequest(result.Error);
-                }
+                await _paymentService.AddAsync(paymentDetails);
 
                 return payKey;
-            }
-            catch (ContractException cex)
-            {
-                return BadRequest(cex.Message);
             }
             catch (Exception ex)
             {
