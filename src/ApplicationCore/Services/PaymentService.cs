@@ -7,6 +7,8 @@ namespace ApplicationCore.Services
 {
     public class PaymentService : IPaymentService
     {
+        private const int PayKeyLength = 10;
+
         private readonly IPaymentRepository _paymentRepository;
 
         public PaymentService(IPaymentRepository paymentRepository)
@@ -14,26 +16,21 @@ namespace ApplicationCore.Services
             _paymentRepository = paymentRepository;
         }
 
-        public async Task<string> GeneratePayKeyAsync()
+        public async Task<PayKeyResult> GeneratePayKeyAsync()
         {
-            string payKey = Utils.Utils.GenerateRandomId(10);
-            int collisions = 0;
+            string payKey = Utils.Utils.GenerateRandomId(PayKeyLength);
 
+            int collisions = 0;
             PaymentDetails payment = await _paymentRepository.GetByPayKeyAsync(payKey);
 
             while (payment != null)
             {
-                payKey = Utils.Utils.GenerateRandomId(10);
+                payKey = Utils.Utils.GenerateRandomId(PayKeyLength);
                 payment = await _paymentRepository.GetByPayKeyAsync(payKey);
                 collisions++;
             }
 
-            if (collisions > 0)
-            {
-                //_logger.LogWarning($"Generate paykey with {collisions} collisions.");
-            }
-
-            return payKey;
+            return new PayKeyResult(payKey, collisions);
         }
 
         public async Task<PaymentDetails> GetByPayKeyAsync(string payKey)

@@ -11,10 +11,11 @@ namespace Web.Controllers
             return View();
         }
 
-        public IActionResult Checkout()
+        [HttpPost]
+        public IActionResult GoToPayment(string payKey)
         {
             string redirectUrl = Url.Action("Payment", "Braintree", null, "https");
-            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey=8ISvpxfmBe");
+            return Redirect($"{redirectUrl}?invoiceNo=ARCTICK-1234567&paykey={payKey}");
         }
 
         public IActionResult Privacy()

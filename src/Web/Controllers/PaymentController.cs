@@ -24,12 +24,17 @@ namespace Web.Controllers
         {
             try
             {
-                string payKey = await _paymentService.GeneratePayKeyAsync();
-                var paymentDetails = new PaymentDetails(payKey, request.total, request.invoiceno, request.currency, request.gateway, request.hashkey);
+                PayKeyResult payKeyResult = await _paymentService.GeneratePayKeyAsync();
+                if (payKeyResult.Collisions > 0)
+                {
+                    _logger.LogWarning($"There were {payKeyResult.Collisions} collisions while generating paykey.");
+                }
+
+                var paymentDetails = new PaymentDetails(payKeyResult.Value, request.total, request.invoiceno, request.currency, request.gateway, request.hashkey);
 
                 await _paymentService.AddAsync(paymentDetails);
 
-                return payKey;
+                return payKeyResult.Value;
             }
             catch (Exception ex)
             {

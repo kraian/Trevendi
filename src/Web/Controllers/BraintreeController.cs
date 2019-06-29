@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
-using Web.Braintree;
 using Web.Models;
 using Web.Services;
 
@@ -17,18 +16,18 @@ namespace Web.Controllers
         private const string Failure = "failed";
 
         private readonly ILogger<BraintreeController> _logger;
-        private readonly IBraintreeConfig _braintreeConfig;
+        private readonly IBraintreeGateway _braintreeGateway;
         private readonly IPaymentService _paymentService;
         private readonly ArcadierService _arcadierService;
 
         public BraintreeController(
             ILogger<BraintreeController> logger,
-            IBraintreeConfig braintreeConfig,
+            IBraintreeGateway braintreeGateway,
             IPaymentService paymentService,
             ArcadierService arcadierService)
         {
             _logger = logger;
-            _braintreeConfig = braintreeConfig;
+            _braintreeGateway = braintreeGateway;
             _paymentService = paymentService;
             _arcadierService = arcadierService;
         }
@@ -45,15 +44,13 @@ namespace Web.Controllers
                     return RedirectToArcadier(payment.InvoiceNo);
                 }
 
-                IBraintreeGateway gateway = _braintreeConfig.GetGateway();
-
                 var model = new PaymentViewModel
                 {
                     InvoiceNo = payment.InvoiceNo,
                     PayKey = paykey,
                     Amount = payment.Amount,
                     Currency = payment.Currency,
-                    ClientToken = gateway.ClientToken.Generate()
+                    ClientToken = _braintreeGateway.ClientToken.Generate()
                 };
 
                 return View(model);
@@ -96,8 +93,7 @@ namespace Web.Controllers
                     }
                 };
 
-                IBraintreeGateway gateway = _braintreeConfig.GetGateway();
-                Result<Transaction> transactionResult = await gateway.Transaction.SaleAsync(request);
+                Result<Transaction> transactionResult = await _braintreeGateway.Transaction.SaleAsync(request);
 
                 if (transactionResult.IsSuccess())
                 {

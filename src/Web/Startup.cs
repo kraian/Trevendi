@@ -1,5 +1,7 @@
 ﻿using ApplicationCore.Interfaces;
 using ApplicationCore.Services;
+using Braintree;
+using Google.Cloud.Diagnostics.AspNetCore;
 using Infrastructure;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,8 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Web.Braintree;
-using Web.Models;
+using Web.Configuration;
 using Web.Services;
 
 namespace Web
@@ -33,39 +34,65 @@ namespace Web
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
 
-            string marketplaceUrl = Configuration.GetSection("Arcadier").GetSection("MarketplaceUrl").Value;
+            services.Configure<ArcadierSettings>(Configuration.GetSection("Arcadier"));
+
+            string marketplaceUrl = Configuration["Arcadier:MarketplaceUrl"];
             services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
             {
                 builder.WithOrigins(marketplaceUrl).AllowAnyMethod().AllowAnyHeader();
             }));
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-            services.AddSingleton<IBraintreeConfig, BraintreeConfig>();
-            services.Configure<ArcadierSettings>(Configuration.GetSection("Arcadier"));
+            // Configure Braintree
+            string environment = Configuration["Braintree:Environment"];
+            string merchantId = Configuration["Braintree:MerchantId"];
+            string publicKey = Configuration["Braintree:PublicKey"];
+            string privateKey = Configuration["Braintree:PrivateKey"];
+            services.AddSingleton<IBraintreeGateway>(s => new BraintreeGateway(environment, merchantId, publicKey, privateKey));
 
-            string projectId = Configuration.GetSection("GoogleCloud").GetSection("ProjectId").Value;
+            string projectId = Configuration["GoogleCloud:ProjectId"];
+            services.AddGoogleExceptionLogging(options =>
+            {
+                options.ProjectId = projectId;
+                options.ServiceName = Configuration["GoogleCloud:ServiceName"];
+                options.Version = Configuration["GoogleCloud:Version"];
+            });
+
+            //services.AddGoogleTrace(options =>
+            //{
+            //    options.ProjectId = projectId;
+            //    options.Options = TraceOptions.Create(bufferOptions: BufferOptions.NoBuffer());
+            //});
+
             services.AddScoped<IPaymentRepository>(s => new PaymentRepository(projectId));
-
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ArcadierService>();
+
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
-            loggerFactory.AddFile("Logs/PaymentGateway-{Date}.txt");
+            // Configure logging service.
+            loggerFactory.AddGoogle(Configuration["GoogleCloud:ProjectId"]);
+
+            // Configure error reporting service.
+            app.UseGoogleExceptionLogging();
+
+            // Configure trace service.
+            //app.UseGoogleTrace();
 
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
+            //else
+            //{
+            //    app.UseExceptionHandler("/Home/Error");
+            //    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+            //    app.UseHsts();
+            //}
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();

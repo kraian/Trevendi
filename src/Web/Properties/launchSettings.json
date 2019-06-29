@@ -12,11 +12,8 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "BraintreePublicKey": "g7fh2kjhgdhc4m56",
-        "BraintreeEnvironment": "sandbox",
-        "BraintreeMerchantId": "3nz8bs3v8rrtns62",
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "BraintreePrivateKey": "79570b11c7017834b63c3b3e2815d6d7"
+        "GOOGLE_APPLICATION_CREDENTIALS": "D:\\Projects\\Trevendi\\src\\Infrastructure\\trevendi-b974743795e5.json",
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     "Web": {

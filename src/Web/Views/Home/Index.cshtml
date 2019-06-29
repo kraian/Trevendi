@@ -2,4 +2,10 @@
     ViewData["Title"] = "Home Page";
 }
 
-<a asp-area="" asp-controller="Home" asp-action="Checkout">Checkout</a>
+<form class="form-inline" asp-controller="Home" asp-action="GoToPayment" method="post">
+    <div class="form-group mx-sm-3">
+        <label for="PayKey" class="mr-2">Pay key:</label>
+        <input type="text" class="form-control" id="PayKey" name="PayKey" />
+    </div>
+    <button type="submit" class="btn btn-primary">Go to payment</button>
+</form>
