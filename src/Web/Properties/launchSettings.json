@@ -12,7 +12,7 @@
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "D:\\Projects\\Trevendi\\src\\Infrastructure\\trevendi-b974743795e5.json",
+        "GOOGLE_APPLICATION_CREDENTIALS": "D:\\Projects\\Trevendi\\src\\Web\\trevendisettings.json",
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },

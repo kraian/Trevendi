@@ -1,6 +1,9 @@
 ﻿using ApplicationCore.Interfaces;
 using ApplicationCore.Services;
 using Braintree;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Drive.v3;
+using Google.Apis.Services;
 using Google.Cloud.Diagnostics.AspNetCore;
 using Infrastructure;
 using Microsoft.AspNetCore.Builder;
@@ -10,6 +13,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Web.Adapters;
 using Web.Configuration;
 using Web.Services;
 
@@ -67,6 +71,16 @@ namespace Web
             services.AddScoped<IPaymentRepository>(s => new PaymentRepository(projectId));
             services.AddScoped<IPaymentService, PaymentService>();
             services.AddScoped<ArcadierService>();
+
+            string[] scopes = { DriveService.Scope.Drive };
+            var credential = GoogleCredential.FromFile("trevendisettings.json").CreateScoped(scopes);
+            services.AddScoped(s => new DriveService(new BaseClientService.Initializer()
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = projectId
+            }));
+
+            services.AddScoped<DriveServiceAdapter>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }

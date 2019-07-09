@@ -46,11 +46,6 @@ namespace Web.Services
 
                     string text = await response.Content.ReadAsStringAsync();
                     ArcadierResponse arcadierResponse = JsonConvert.DeserializeObject<ArcadierResponse>(text);
-                    if (arcadierResponse == null)
-                    {
-                        _logger.LogWarning($"Arcadier response is null.");
-                        return false;
-                    }
 
                     if (!arcadierResponse.Success)
                     {

@@ -1,10 +1,14 @@
 ﻿using ApplicationCore.Entities;
 using ApplicationCore.Interfaces;
 using Braintree;
+using CsvHelper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
+using Web.Adapters;
 using Web.Models;
 using Web.Services;
 
@@ -14,22 +18,26 @@ namespace Web.Controllers
     {
         private const string Success = "success";
         private const string Failure = "failed";
+        private const string PaymentsFolderName = "Payments";
 
         private readonly ILogger<BraintreeController> _logger;
         private readonly IBraintreeGateway _braintreeGateway;
         private readonly IPaymentService _paymentService;
         private readonly ArcadierService _arcadierService;
+        private readonly DriveServiceAdapter _driveServiceAdapter;
 
         public BraintreeController(
             ILogger<BraintreeController> logger,
             IBraintreeGateway braintreeGateway,
             IPaymentService paymentService,
-            ArcadierService arcadierService)
+            ArcadierService arcadierService,
+            DriveServiceAdapter driveServiceAdapter)
         {
             _logger = logger;
             _braintreeGateway = braintreeGateway;
             _paymentService = paymentService;
             _arcadierService = arcadierService;
+            _driveServiceAdapter = driveServiceAdapter;
         }
 
         [HttpGet]
@@ -81,11 +89,9 @@ namespace Web.Controllers
                     return RedirectToArcadier(model.InvoiceNo);
                 }
 
-                SplitAmount splitAmount = _arcadierService.GetSplitAmount(payment.Amount);
-
                 var request = new TransactionRequest
                 {
-                    Amount = splitAmount.MerchantAmount,
+                    Amount = payment.Amount,
                     PaymentMethodNonce = model.PaymentMethodNonce,
                     Options = new TransactionOptionsRequest
                     {
@@ -97,6 +103,9 @@ namespace Web.Controllers
 
                 if (transactionResult.IsSuccess())
                 {
+                    SplitAmount splitAmount = _arcadierService.GetSplitAmount(payment.Amount);
+                    await GenerateAndUploadPaymentFileAsync(payment.InvoiceNo, payment.PayKey, splitAmount.MerchantAmount, payment.Currency, "marianciortea86@gmail.com");
+
                     payment.BraintreeStatus = ApplicationCore.Entities.TransactionStatus.Success;
                 }
                 else
@@ -129,6 +138,66 @@ namespace Web.Controllers
         {
             string redirectUrl = _arcadierService.GetRedirectUrl(invoiceNo);
             return Redirect(redirectUrl);
+        }
+
+        private string GeneratePaymentFile(string invoiceNo, string payKey, decimal amount, string currency)
+        {
+            var records = new List<RevolutPaymentFile>
+            {
+                new RevolutPaymentFile
+                {
+                    Name = "Marian",
+                    RecipientType = "type",
+                    IBAN = "5555555555554444",
+                    BIC = "234234534",
+                    RecipientBankCountry = "Romania",
+                    Currency = currency,
+                    Amount = amount,
+                    PaymentReference = "Payment",
+                    RecipientCountry = "Romania",
+                    AddressLine1 = "34 af",
+                    AddressLine2 = "ddd dd",
+                    City = "Timisoara",
+                    PostalCode = "3434"
+                }
+            };
+
+
+            if (!Directory.Exists(PaymentsFolderName))
+            {
+                Directory.CreateDirectory(PaymentsFolderName);
+            }
+
+            string filename = $"{invoiceNo}-{payKey}.csv";
+            string filePath = Path.Combine(PaymentsFolderName, filename);
+            using (var writer = new StreamWriter(filePath))
+            using (var csv = new CsvWriter(writer))
+            {
+                csv.WriteRecords(records);
+            }
+
+            return filePath;
+        }
+
+        private async Task GenerateAndUploadPaymentFileAsync(string invoiceNo, string payKey, decimal amount, string currency, string shareWithEmail)
+        {
+            string filePath = GeneratePaymentFile(invoiceNo, payKey, amount, currency);
+            string folderId = await _driveServiceAdapter.GetFolderIdByNameAsync(PaymentsFolderName);
+
+            if (!string.IsNullOrWhiteSpace(shareWithEmail))
+            {
+                bool alreadyShared = await _driveServiceAdapter.AlreadyShared(folderId);
+                if (!alreadyShared)
+                {
+                    await _driveServiceAdapter.ShareFile(folderId, shareWithEmail);
+                }
+            }
+
+            string fileId = await _driveServiceAdapter.UploadFileToFolder(filePath, folderId, "text/csv");
+            if (!string.IsNullOrWhiteSpace(fileId))
+            {
+                System.IO.File.Delete(filePath);
+            }
         }
     }
 }
