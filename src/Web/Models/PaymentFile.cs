@@ -2,7 +2,7 @@
 
 namespace Web.Models
 {
-    public class RevolutPaymentFile
+    public class PaymentFile
     {
         [Name("Name")]
         public string Name { get; set; }

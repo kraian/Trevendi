@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Web.Adapters;
 using Web.Configuration;
+using Web.Interfaces;
 using Web.Services;
 
 namespace Web
@@ -68,10 +69,6 @@ namespace Web
             //    options.Options = TraceOptions.Create(bufferOptions: BufferOptions.NoBuffer());
             //});
 
-            services.AddScoped<IPaymentRepository>(s => new PaymentRepository(projectId));
-            services.AddScoped<IPaymentService, PaymentService>();
-            services.AddScoped<ArcadierService>();
-
             string[] scopes = { DriveService.Scope.Drive };
             var credential = GoogleCredential.FromFile("trevendisettings.json").CreateScoped(scopes);
             services.AddScoped(s => new DriveService(new BaseClientService.Initializer()
@@ -80,7 +77,12 @@ namespace Web
                 ApplicationName = projectId
             }));
 
-            services.AddScoped<DriveServiceAdapter>();
+            services.AddScoped<IPaymentRepository>(s => new PaymentRepository(projectId));
+            services.AddScoped<IPaymentService, PaymentService>();
+            services.AddScoped<IArcadierService, ArcadierService>();
+            services.AddScoped<IPaymentFileService, PaymentFileService>();
+            services.AddScoped<IDriveServiceAdapter, DriveServiceAdapter>();
+            services.AddScoped<IPaymentFileUploadService, PaymentFileUploadService>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
