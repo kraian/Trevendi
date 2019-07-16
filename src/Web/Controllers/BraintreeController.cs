@@ -14,6 +14,7 @@ namespace Web.Controllers
     {
         private const string Success = "success";
         private const string Failure = "failed";
+        private const string ShareEmail = "marianciortea86@gmail.com";
 
         private readonly ILogger<BraintreeController> _logger;
         private readonly IBraintreeGateway _braintreeGateway;
@@ -96,10 +97,11 @@ namespace Web.Controllers
 
                 Result<Transaction> transactionResult = await _braintreeGateway.Transaction.SaleAsync(request);
 
+                Task uploadTask = null;
                 if (transactionResult.IsSuccess())
                 {
                     SplitAmount splitAmount = _arcadierService.GetSplitAmount(payment.Amount);
-                    await _paymentFileUploadService.UploadAsync(payment.InvoiceNo, payment.PayKey, splitAmount.MerchantAmount, payment.Currency, "marianciortea86@gmail.com");
+                    uploadTask = Task.Run(() => _paymentFileUploadService.UploadAsync(payment.InvoiceNo, payment.PayKey, splitAmount.MerchantAmount, payment.Currency, ShareEmail));
 
                     payment.BraintreeStatus = ApplicationCore.Entities.TransactionStatus.Success;
                 }
@@ -118,6 +120,21 @@ namespace Web.Controllers
                 }
 
                 await _paymentService.UpdateAsync(payment);
+
+                if (uploadTask != null)
+                {
+                    try
+                    {
+                        uploadTask.Wait();
+                    }
+                    catch (AggregateException ae)
+                    {
+                        foreach (var exception in ae.InnerExceptions)
+                        {
+                            _logger.LogError(exception, exception.Message);
+                        }
+                    }
+                }
 
                 return RedirectToArcadier(payment.InvoiceNo);
             }
